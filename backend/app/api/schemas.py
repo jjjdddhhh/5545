@@ -348,3 +348,62 @@ class PromptIn(BaseModel):
 
 class PromptSaved(PromptView):
     warnings: list[str] = Field(default_factory=list)   # 버전 1에 있던 변수가 빠졌으면 알려 준다
+
+
+# ---------- 수정 요청 에이전트(설계서 13절) ----------
+class EditRequestIn(BaseModel):
+    # edit_request.request_text VARCHAR(1000)과 같은 상한이다.
+    request_text: str = Field(min_length=1, max_length=1000)
+
+
+class EditRequestCreated(BaseModel):
+    edit_request_id: int
+
+
+class AgentActionOut(ORM):
+    id: int
+    seq: int
+    tool_name: str
+    label: str = ""                # 도구의 한국어 설명
+    arguments: dict | list | None = None
+    result_summary: Optional[str] = None
+    status: str                    # ok, error, blocked(가드레일이 막은 호출)
+    latency_ms: Optional[int] = None
+
+
+class EditRequestOut(ORM):
+    id: int
+    project_id: int
+    request_text: str
+    status: str                    # running, proposed, refused, limit, failed, done
+    tool_calls: int
+    summary: Optional[str] = None
+    llm_model: str
+    created_at: datetime
+    finished_at: Optional[datetime] = None
+    actions: list[AgentActionOut] = Field(default_factory=list)
+
+
+class ProposalOut(ORM):
+    id: int
+    edit_request_id: int
+    target_type: str               # scene, narration, manual_step
+    target_id: int
+    field_name: str
+    field_label: str = ""
+    target_label: str = ""         # 예: "장면 3 · 작업 전 점검", "매뉴얼 2단계 · 보호구 착용"
+    scene_id: Optional[int] = None # 화면에서 해당 장면으로 이동할 때 쓴다(장면·내레이션 제안)
+    before_value: Optional[str] = None
+    after_value: str
+    current_value: Optional[str] = None   # 지금 값. before_value와 다르면 stale이다
+    stale: bool = False            # 제안을 만든 뒤 내용이 바뀌어 승인할 수 없는 상태
+    reason: Optional[str] = None
+    user_edited: bool              # 사용자가 직접 고친 필드에 대한 제안이면 화면에 경고를 붙인다
+    status: str                    # pending, accepted, rejected
+    decided_at: Optional[datetime] = None
+    subtitle_preview: list[str] = Field(default_factory=list)   # 내레이션 제안의 자막 미리보기(코드가 나눔)
+    checks: dict = Field(default_factory=dict)                  # 제안 검수 결과 {"ok", "results"}
+
+
+class RejectIn(BaseModel):
+    reason: Optional[str] = Field(default=None, max_length=300)
