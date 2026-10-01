@@ -1,0 +1,19 @@
+# 백엔드 의존성. 설치 후 버전이 확정되면 pip freeze로 고정한다.
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+pymysql
+cryptography          # MySQL 8의 기본 인증 방식(caching_sha2_password)에 pymysql이 필요로 한다
+alembic
+pydantic>=2
+python-dotenv
+python-multipart      # 원고 파일 업로드
+sse-starlette         # 생성 진행 알림(SSE)
+ollama
+python-docx
+pypdf
+icalendar
+# 개발·테스트용
+pytest
+httpx                 # FastAPI TestClient
+reportlab             # 테스트용 PDF 생성
