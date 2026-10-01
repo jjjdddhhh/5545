@@ -141,15 +141,24 @@ def setup_db() -> None:
 
     print("  MySQL root 계정으로 DB를 준비합니다. MySQL을 설치할 때 정한 root 비밀번호를 넣어 주세요.")
     print("  (입력하는 글자는 화면에 보이지 않습니다.)")
-    root_pw = getpass.getpass("  root 비밀번호: ")
-    try:
-        conn = pymysql.connect(host="localhost", port=3306, user="root", password=root_pw, charset="utf8mb4",
-                               autocommit=True)
-    except pymysql.err.OperationalError as exc:
-        code = exc.args[0] if exc.args else None
-        if code == 1045:
-            fail("root 비밀번호가 맞지 않습니다. 다시 실행해 정확한 비밀번호를 넣어 주세요.")
-        fail(f"MySQL에 연결하지 못했습니다. MySQL 서비스가 켜져 있는지 확인해 주세요(Windows: 서비스 앱에서 MySQL80). ({exc})")
+    # 비밀번호를 잘못 넣어도 처음부터 다시 실행하지 않도록 세 번까지 다시 묻는다.
+    # 세 번이면 오타는 충분히 바로잡을 수 있고, 비밀번호를 정말 모르는 경우에는 끝없이 묻지 않고 멈추기 위해서다.
+    conn = None
+    for attempt in range(1, 4):
+        root_pw = getpass.getpass("  root 비밀번호: ")
+        try:
+            conn = pymysql.connect(host="localhost", port=3306, user="root", password=root_pw, charset="utf8mb4",
+                                   autocommit=True)
+            break
+        except pymysql.err.OperationalError as exc:
+            code = exc.args[0] if exc.args else None
+            if code != 1045:   # 1045는 비밀번호 오류. 그 밖의 오류(서버 꺼짐 등)는 다시 물어도 소용이 없다
+                fail(f"MySQL에 연결하지 못했습니다. MySQL 서비스가 켜져 있는지 확인해 주세요"
+                     f"(Windows: 서비스 앱에서 MySQL80). ({exc})")
+            if attempt < 3:
+                print(f"  root 비밀번호가 맞지 않습니다. 다시 넣어 주세요({attempt}/3).")
+    if conn is None:
+        fail("root 비밀번호가 세 번 맞지 않았습니다. 비밀번호를 확인한 뒤 다시 실행해 주세요.")
 
     with conn.cursor() as cur:
         cur.execute("SELECT VERSION()")
