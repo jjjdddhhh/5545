@@ -166,6 +166,13 @@ pytest
 6. 호롱불 원고와 규칙을 받으면 PROMPT.md의 4번과 5번 프롬프트를 쓴다. 경고·과장 표현 목록(`backend/app/rules/`)은 초안이다.
 7. 결과보고서 지표는 `python scripts\report_metrics.py --out ..\docs\eval\metrics.md`로 뽑는다.
 
+## 구현 이후: 설치·실행 도우미와 사용자 PC 확인 (완료)
+
+- 저장소 루트에 `dev.py`(setup, start, check)와 `setup.bat`, `start.bat`, `.vscode/tasks.json`을 더했다. VS Code에서는 `Ctrl+Shift+B`가 실행, "Tasks: Run Task"의 "처음 설치"가 설치다.
+- 설치는 mysql 명령 없이 pymysql로 DB를 준비하고, content_ai 비밀번호를 .env와 맞춘다. root 비밀번호는 세 번까지 다시 묻고, 입력이 안 되면 `python dev.py setup --show`로 보이게 입력한다.
+- Windows에서 생긴 문제를 고쳤다: alembic.ini의 한글 주석(cp949로 읽혀 실패), 서버 준비 확인 실패(포트 접속 확인으로 변경), VS Code 안에서 브라우저가 열림(운영체제 기본 브라우저로 열기).
+- 사용자 PC(Windows, MySQL 8.0.46, 폴더 `C:\Users\jdh03\울산 AX\5545`)에서 설치와 실행이 되는 것을 확인했다. 실제 Ollama 모델로 생성하는 확인은 이제부터 VS Code의 Claude Code에서 이어서 한다.
+
 ## 사용자와 정한 것
 
 - 사용자가 "+ 장면 추가"로 만든 장면에도 C02·C03 경고를 그대로 띄운다.
