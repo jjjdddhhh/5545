@@ -30,6 +30,18 @@ Python 3.11 이상, Node.js 20 이상, MySQL 8.0.16 이상, Ollama를 설치한 
 
 VS Code에서 저장소 폴더를 열었다면 `Ctrl+Shift+B`로 실행할 수 있습니다. 설치와 상태 확인, 테스트는 `Ctrl+Shift+P`를 누른 뒤 "Tasks: Run Task"에서 고릅니다. 터미널에서는 `python dev.py setup`, `python dev.py start`, `python dev.py check`로 같은 일을 합니다.
 
+### VS Code로 하는 순서
+
+1. https://code.visualstudio.com 에서 VS Code를 설치합니다. 처음 열면 오른쪽 아래에 한국어 언어 팩 설치 안내가 뜨는데, 설치하면 메뉴가 한국어로 바뀝니다.
+2. 코드를 받습니다. 시작 화면의 "Git 리포지토리 복제"(Clone Git Repository)를 누르고 저장소 주소 `https://github.com/jjjdddhhh/5545.git`을 넣은 뒤, 저장할 폴더(예: 문서)를 고릅니다. 다 받으면 "열기"를 누릅니다. Git이 없다는 안내가 나오면 안내대로 Git을 설치한 뒤 VS Code를 다시 엽니다.
+3. 작업 브랜치로 바꿉니다. 왼쪽 아래 상태 표시줄의 브랜치 이름(`main`)을 누르고 `origin/claude/claude-code-prompts-ex9lxt`를 고릅니다. PR을 main에 병합한 뒤라면 이 단계는 건너뜁니다.
+4. 처음 한 번 설치합니다. `Ctrl+Shift+P`를 누르고 "Tasks: Run Task"(작업 실행)를 고른 뒤 "처음 설치 (패키지, DB, 프롬프트)"를 고릅니다. 아래 터미널에 root 비밀번호를 묻는 줄이 나오면 입력하고 Enter를 누릅니다. 입력한 글자는 보이지 않습니다.
+5. 실행합니다. `Ctrl+Shift+B`를 누르면 백엔드와 화면이 함께 켜지고 브라우저가 열립니다.
+6. 끌 때는 아래 터미널을 한 번 누른 뒤 `Ctrl+C`를 누릅니다. 터미널 오른쪽 위의 휴지통 아이콘을 눌러도 꺼집니다.
+7. 새 버전을 받을 때는 왼쪽 막대의 소스 제어 아이콘을 누르고, 위쪽 `...` 메뉴에서 "끌어오기"(Pull)를 누릅니다.
+
+명령을 직접 쳐야 할 때는 `Ctrl+백틱`으로 아래 터미널을 엽니다. 이 터미널은 처음부터 프로젝트 폴더에서 시작합니다.
+
 아래는 같은 과정을 명령어로 하나씩 하는 방법입니다.
 
 ## 설치부터 실행까지
