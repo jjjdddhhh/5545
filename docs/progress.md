@@ -44,6 +44,20 @@ python scripts\check_db.py
 pytest
 ```
 
+## 단계 1. 백엔드 뼈대와 원고 입력 (완료)
+
+- `app/config.py`: 저장소 루트의 `.env`를 읽고, 분량·자막 기본값(장면당 30초, 분당 300자, 한 줄 16자, 최대 2줄, 허용 오차 ±15%)을 근거 주석과 함께 둔다.
+- `app/db/session.py`, `app/db/models.py`: SQLAlchemy 2 모델 21개. `tests/test_models_schema.py`가 실제 MySQL에 적용한 schema.sql과 컬럼, NULL 허용, 외래키를 대조한다.
+- Alembic: `0001_baseline` 리비전이 schema.sql을 그대로 실행한다. 이미 만든 DB는 `alembic stamp head`로 표시한다(README 참고).
+- `app/main.py`: CORS(localhost:5173 허용), `GET /api/health`(DB와 Ollama 연결 여부).
+- 프로젝트 API(만들기, 목록·검색, 상세), 원고 API(붙여넣기·파일 업로드와 비교 미리보기, hwp 안내 400, 문단 합치기·나누기 저장), 생성 조건 API(저장·조회).
+- 테스트 22개 통과(DB 테스트 6개 포함).
+
+확인 방법(backend 폴더에서 `uvicorn app.main:app --reload --port 8000` 실행 후):
+
+- http://localhost:8000/docs 에서 API 문서를 보고 직접 호출해 볼 수 있다.
+- http://localhost:8000/api/health 에서 `db.ok`가 true인지 확인한다. Ollama를 켜 두었다면 `ollama.ok`와 `model_ready`도 true다.
+
 ## 남은 단계
 
-단계 1부터 단계 8까지 남아 있다.
+단계 2부터 단계 8까지 남아 있다.

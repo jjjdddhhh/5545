@@ -6,6 +6,8 @@ from typing import Optional, TypeVar
 from ollama import Client
 from pydantic import BaseModel, ValidationError
 
+import app.config  # noqa: F401  저장소 루트의 .env를 아래 os.getenv보다 먼저 읽게 한다
+
 T = TypeVar("T", bound=BaseModel)
 
 # 백엔드와 Ollama가 같은 노트북에서 Docker 없이 돈다고 가정한다. 값은 .env로 바꿀 수 있다.
