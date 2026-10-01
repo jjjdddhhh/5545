@@ -26,7 +26,7 @@ import type {
 } from "../api/types";
 import { STAGE_LABEL } from "../lib/labels";
 
-/** 화면에 그릴 단계 하나. latencyMs는 stage_done에서, stats는 snapshot에서 채운다. */
+/** 화면에 그릴 단계 하나. latencyMs는 stage_done에서 채우고, 놓쳤으면 snapshot의 latency_ms로 채운다. stats는 snapshot에서 채운다. */
 export interface StageView {
   key: string;
   label: string;
@@ -102,7 +102,8 @@ function reducer(state: RunEventsState, action: Action): RunEventsState {
 
   switch (action.type) {
     case "snapshot": {
-      // 기준 상태. 단계 목록과 상태를 통째로 바꾼다. 앞서 받은 단계별 소요 시간은 key가 같으면 이어서 쓴다.
+      // 기준 상태. 단계 목록과 상태를 통째로 바꾼다.
+      // 걸린 시간은 실시간 stage_done에서 받은 값이 있으면 그것을, 없으면(화면이 늦게 연결되어 놓친 경우) snapshot의 값을 쓴다.
       const ev = action.data as SnapshotEvent;
       const prev = new Map(state.stages.map((s) => [s.key, s]));
       return {
@@ -116,7 +117,7 @@ function reducer(state: RunEventsState, action: Action): RunEventsState {
           label: s.label,
           status: s.status,
           stats: s.stats,
-          latencyMs: prev.get(s.key)?.latencyMs ?? null,
+          latencyMs: prev.get(s.key)?.latencyMs ?? s.latency_ms ?? null,
         })),
       };
     }

@@ -476,6 +476,11 @@ def run_snapshot(db: Session, run: m.GenerationRun) -> dict:
         st["latency_ms"] += lat or 0
     for s in stages:
         s["stats"] = stats.get(s["key"])
+        # 끝난 단계의 걸린 시간. 화면이 늦게 연결되어 stage_done 이벤트를 놓쳐도 시간을 보여 줄 수 있게 한다.
+        # 코드 단계는 단계마다 남긴 로그 한 줄의 시간을 쓰고(CODE_STAGES), LLM 단계는 그 단계의 LLM 호출 시간 합을 쓴다.
+        # LLM 단계에 단계 전체 시간을 따로 남기지 않는 이유: agent_step_log의 LLM 단계 행은 호출 하나를 뜻하므로,
+        # 행을 더하면 report_metrics.py의 호출 수가 틀어진다. 호출 사이의 DB 저장 시간은 몇 ms라 합으로 충분하다.
+        s["latency_ms"] = (s["stats"] or {}).get("latency_ms") if s["status"] in ("done", "failed") else None
     return {"type": "snapshot", "run_id": run.id, "project_id": run.project_id, "status": run.status,
             "current_stage": run.current_stage, "error_message": run.error_message,
             "llm_model": run.llm_model, "stages": stages}

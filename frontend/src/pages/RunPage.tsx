@@ -157,7 +157,12 @@ export default function RunPage() {
                       >
                         {STAGE_STATUS_LABEL[s.status]}
                       </span>
-                      {s.latencyMs !== null && <span className="text-xs text-slate-400">{(s.latencyMs / 1000).toFixed(1)}초</span>}
+                      {s.latencyMs !== null && (
+                        // 0.1초보다 짧은 코드 단계는 "0.0초" 대신 "0.1초 미만"으로 보여 준다(0초로 읽히지 않게).
+                        <span className="text-xs text-slate-400">
+                          {s.latencyMs < 100 ? "0.1초 미만" : `${(s.latencyMs / 1000).toFixed(1)}초`}
+                        </span>
+                      )}
                       {s.stats && s.stats.tokens_out > 0 && (
                         <span className="text-xs text-slate-400">
                           LLM 호출 {s.stats.calls}회 · 출력 {s.stats.tokens_out} 토큰

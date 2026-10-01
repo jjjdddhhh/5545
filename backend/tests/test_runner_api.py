@@ -92,6 +92,8 @@ def test_run_end_to_end_and_reconnect(client, db, fake):
     snap = events[0][1]
     assert all(s["status"] == "done" for s in snap["stages"])
     assert snap["stages"][3]["stats"]["calls"] == 4
+    # 끝난 단계는 모두 걸린 시간을 가진다(늦게 연결해도 화면이 시간을 보여 줄 수 있다)
+    assert all(isinstance(s["latency_ms"], int) for s in snap["stages"])
 
 
 def test_rerun_keeps_previous_result_not_current(client, db, fake):

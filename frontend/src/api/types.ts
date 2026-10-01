@@ -164,6 +164,8 @@ export interface SnapshotStage {
   label: string;
   status: StageStatus;
   stats: StageStats | null;
+  /** 끝난 단계의 걸린 시간(ms). 아직 안 끝난 단계는 null이다. stage_done을 놓쳤을 때 이 값을 쓴다. */
+  latency_ms: number | null;
 }
 
 /** SSE의 첫 이벤트. DB만 보고 다시 만든 실행 상태라 언제나 믿을 수 있는 기준 상태다. */
