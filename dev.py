@@ -254,6 +254,21 @@ def wait_http(url: str, seconds: int) -> bool:
     return False
 
 
+def open_in_system_browser(url: str) -> None:
+    """운영체제의 기본 브라우저(크롬, 엣지 등)로 연다.
+    webbrowser.open을 바로 쓰지 않는 이유: VS Code 터미널은 BROWSER 환경변수를 VS Code 자신으로 바꿔 두는 경우가 있어,
+    그대로 열면 화면이 VS Code 안의 브라우저 탭에서 열린다. 운영체제의 "기본 프로그램으로 열기"를 직접 부르면 이를 피한다."""
+    try:
+        if IS_WIN:
+            os.startfile(url)                                   # 탐색기에서 더블클릭한 것과 같다
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", url])
+        else:
+            subprocess.Popen(["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        webbrowser.open(url)                                    # 위 방법이 안 되면 파이썬 기본 방식으로 연다
+
+
 def start() -> None:
     """백엔드와 화면을 함께 켠다. 두 프로그램의 출력이 이 창 하나에 섞여 나온다. Ctrl+C로 둘 다 끈다."""
     if not VENV_PY.exists() or not (FRONTEND / "node_modules").exists():
@@ -271,7 +286,7 @@ def start() -> None:
     try:
         if wait_http(f"{BACKEND_URL}/api/health", 40) and wait_http(FRONTEND_URL, 40):
             print(f"\n준비되었습니다. 브라우저에서 {FRONTEND_URL} 을 엽니다.", flush=True)
-            webbrowser.open(FRONTEND_URL)
+            open_in_system_browser(FRONTEND_URL)
         else:
             print("\n[주의] 서버가 40초 안에 켜지지 않았습니다. 위의 오류 메시지를 확인해 주세요.", flush=True)
         while all(p.poll() is None for p in procs):   # 둘 중 하나라도 꺼지면 함께 끈다
