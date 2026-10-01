@@ -263,3 +263,88 @@ class ScheduleItemPatch(BaseModel):
     duration_days: Optional[int] = Field(default=None, ge=1, le=365)
     interval_days: Optional[int] = Field(default=None, ge=0, le=365)   # 0을 보내면 반복 없음으로 바꾼다
     note: Optional[str] = Field(default=None, max_length=500)
+
+
+# ---------- 장면 수정·재생성·순서 ----------
+class ScenePatch(BaseModel):
+    """장면에서 사용자가 직접 고칠 수 있는 필드(설계서 6절 PATCH /api/scenes). 보낸 필드만 바꾼다."""
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    key_point: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    screen_description: Optional[str] = None
+    visual_suggestion: Optional[str] = None
+    on_screen_text: Optional[str] = Field(default=None, max_length=300)
+
+
+class RegenerateIn(BaseModel):
+    """다시 만들 부분. detail은 화면 설명·시각자료·화면 텍스트, narration은 내레이션과 자막이다."""
+    parts: list[Literal["detail", "narration"]] = Field(default_factory=lambda: ["detail", "narration"], min_length=1)
+
+
+class RegenerateOut(BaseModel):
+    scene: SceneOut
+    regenerated: list[str]         # 실제로 다시 만든 부분
+    kept: list[str]                # 사용자가 고쳐서 그대로 둔 필드(설계서 10절 규칙 2)
+
+
+class SceneOrderIn(BaseModel):
+    scene_ids: list[int] = Field(min_length=1)   # 현재 구성안의 장면 id를 원하는 순서대로 모두 보낸다
+
+
+class SceneCreate(BaseModel):
+    """결과 작업공간의 "+ 장면 추가". 새 장면은 맨 뒤에 붙고, 시간은 장면당 기본 시간이다."""
+    title: str = Field(min_length=1, max_length=200)
+    key_point: str = Field(default="", max_length=500)
+    source_paragraphs: list[str] = Field(default_factory=list)
+
+
+# ---------- 검수 ----------
+class CheckItem(ORM):
+    id: int
+    check_code: str
+    label: str = ""                # 화면에 보여 줄 항목 이름(review.CHECK_LABEL)
+    target_type: Optional[str] = None
+    target_id: Optional[int] = None
+    result: str                    # pass, warn, fail, unchecked
+    message: Optional[str] = None
+    checked_by: Optional[int] = None
+    checked_at: Optional[datetime] = None
+
+
+class ChecksView(BaseModel):
+    run_id: int
+    summary: dict                  # {pass, warn, fail, total, pass_rate} 자동 항목만 센다
+    auto: list[CheckItem]          # C01~C12
+    human: list[CheckItem]         # H01~H03
+
+
+class HumanCheckIn(BaseModel):
+    checked: bool
+    note: Optional[str] = Field(default=None, max_length=500)
+
+
+# ---------- 프롬프트 템플릿 ----------
+class PromptVersion(BaseModel):
+    id: Optional[int] = None       # 파일 원문(DB에 아직 없음)이면 None
+    version: int
+    is_active: bool
+    created_at: Optional[datetime] = None
+
+
+class PromptView(BaseModel):
+    stage: str
+    source: str                    # db: prompt_template의 활성 버전, file: llm/prompts/의 원문(DB에 아직 없음)
+    version: int
+    system_prompt: str
+    user_template: str
+    output_schema: dict
+    placeholders: list[str]        # 템플릿 속 {이름} 목록
+    versions: list[PromptVersion]
+
+
+class PromptIn(BaseModel):
+    system_prompt: str = Field(min_length=1)
+    user_template: str = Field(min_length=1)
+
+
+class PromptSaved(PromptView):
+    warnings: list[str] = Field(default_factory=list)   # 버전 1에 있던 변수가 빠졌으면 알려 준다

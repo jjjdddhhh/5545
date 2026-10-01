@@ -8,7 +8,7 @@ from app.api.schemas import ManualStepPatch, ManualView, ScheduleItemPatch
 from app.api.views import manual_view
 from app.db import models as m
 from app.db.session import get_db
-from app.pipeline import persist
+from app.pipeline import persist, review
 from app.pipeline.schedule import layout
 
 router = APIRouter(tags=["매뉴얼·일정"])
@@ -50,6 +50,7 @@ def patch_manual_step(step_id: int, body: ManualStepPatch, db: Session = Depends
                 if it.manual_step_id == step.id and it.source == "ai" and it.title == old:
                     it.title = new[:200]
     db.commit()
+    review.recheck_for_run_id(db, step.manual.run_id)   # 고친 문장의 수치(C08)와 표현(C12)을 다시 확인한다
     return manual_view(db, step.manual)
 
 
@@ -74,6 +75,8 @@ def patch_schedule_item(item_id: int, body: ScheduleItemPatch, db: Session = Dep
         item.source = "user"
         relayout(item.manual)
     db.commit()
+    if changed:
+        review.recheck_for_run_id(db, item.manual.run_id)
     return manual_view(db, item.manual)
 
 

@@ -8,7 +8,6 @@ from typing import Optional
 from app import config
 from app.llm.prompt_store import PromptSet, common_values
 from app.llm.schemas import NarrationOut
-from app.pipeline import budget as budget_mod
 from app.pipeline import checks
 from app.pipeline.llm_step import StepRecorder, call_llm
 from app.pipeline.scene_detail import source_text_for
@@ -44,17 +43,8 @@ def clean_narration(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def check_budget(text: str, budget: int, target_type: str = "narration", ref=None,
-                 tolerance: float = config.NARRATION_TOLERANCE) -> checks.CheckResult:
-    """C04: 내레이션 글자 수(공백 제외)가 장면 예산의 ±허용 오차 안에 있는지."""
-    n = budget_mod.count_chars(text)
-    lo, hi = int(budget * (1 - tolerance) + 0.999), int(budget * (1 + tolerance))   # 허용 범위를 정수 글자 수로
-    if budget_mod.within_tolerance(n, budget, tolerance):
-        return checks.CheckResult("C04", checks.PASS, f"{n}자 (예산 {budget}자, 허용 {lo}~{hi}자)", target_type, ref)
-    side = "깁니다" if n > budget else "짧습니다"
-    return checks.CheckResult("C04", checks.FAIL,
-                              f"내레이션이 {n}자로 {side}. 공백을 빼고 {lo}~{hi}자(예산 {budget}자)로 맞춰야 합니다.",
-                              target_type, ref, {"chars": n, "budget": budget, "min": lo, "max": hi})
+# C04 글자 수 검사는 검수 전체(checks.run_checks)와 함께 쓰려고 checks.check_budget에 둔다.
+check_budget = checks.check_budget
 
 
 def generate_narration(recorder: StepRecorder, prompt: PromptSet, setting, scene: NarrationInput,

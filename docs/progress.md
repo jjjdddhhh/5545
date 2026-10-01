@@ -106,6 +106,20 @@ pytest
   - http://localhost:8000/api/projects/{id}/export?format=ics&start_date=2026-11-02 (구글 캘린더나 Outlook에 가져오기)
   - http://localhost:8000/api/projects/{id}/export?format=csv&start_date=2026-11-02 (엑셀에서 한글이 깨지지 않는지 확인)
 
+## 단계 5. 검수와 수정 정책 (완료)
+
+- `pipeline/checks.py`: C02~C12 검사 함수와 실행 전체 검수(run_checks). `app/rules/warning_terms.txt`(C10), `app/rules/hype_terms.txt`(C12)에 초안 표현을 채웠다.
+- `pipeline/review.py`: DB에서 검수 입력을 모으고, C06·C07(자막 재분할), C09(일정 재배치), C10(주의사항 후보 추가)을 자동으로 고치고, 저장 정책(다시 요청해도 실패하면 경고)을 적용해 review_check에 저장한다. 사람 확인 H01~H03 행도 만든다.
+- 생성 6단계가 review.evaluate를 쓰고, 사용자가 고칠 때마다 코드 검수를 다시 한다.
+- API: `PATCH /api/scenes/{id}`, `POST /api/scenes/{id}/regenerate`(고친 필드는 고정값으로 넘기고 덮어쓰지 않음), `PUT /api/projects/{id}/scene-order`, `POST /api/projects/{id}/scenes`(장면 추가), `GET /api/runs/{id}/checks`, `POST /api/runs/{id}/checks/recheck`, `PUT /api/runs/{id}/human-checks/{H01~H03}`, `GET·PUT /api/prompts/{stage}`, `POST /api/prompts/{stage}/versions/{n}/activate`.
+- 모든 수정은 revision에 남는다(장면 필드, 내레이션, 장면 순서, 매뉴얼 단계, 일정).
+- 테스트 84개 통과.
+
+확인 방법:
+
+- 생성 후 http://localhost:8000/api/runs/{run_id}/checks 에서 항목별 결과와 통과율(summary.pass_rate)을 본다.
+- `app/rules/`의 표현 목록을 고친 뒤 `POST /api/runs/{run_id}/checks/recheck`로 다시 검수해 본다.
+
 ## 남은 단계
 
-단계 5부터 단계 8까지 남아 있다.
+단계 6부터 단계 8까지 남아 있다.

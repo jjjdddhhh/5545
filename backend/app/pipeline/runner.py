@@ -26,7 +26,7 @@ from app.db import session as db_session
 from app.llm import llm_client
 from app.llm.prompt_store import active_prompt
 from app.pipeline import budget as budget_mod
-from app.pipeline import checks, persist
+from app.pipeline import checks, persist, review
 from app.pipeline.events import hub
 from app.pipeline.manual import generate_manual, outline_text
 from app.pipeline.narration import NarrationInput, generate_narration
@@ -405,14 +405,13 @@ def stage_manual(ctx: RunContext) -> dict:
     return {"title": manual.title, "steps": len(out.steps), "cautions": len(out.cautions), "retried": res.retried}
 
 
+# ---------- 6단계 검수 ----------
 def stage_checks(ctx: RunContext) -> dict:
-    """지금은 생성 단계에서 넘어온 기록만 저장한다. 단계 5에서 C01~C12 전체로 바꾼다."""
-    for n in ctx.notes:
-        ctx.db.add(m.ReviewCheck(run_id=ctx.run.id, check_code=n.code, target_type=n.target_type,
-                                 target_id=n.target_ref, result=n.result if n.code == "C01" else checks.WARN,
-                                 message=n.message[:500]))
-    ctx.db.commit()
-    return {"notes": len(ctx.notes)}
+    """C01~C12를 저장한다. 생성 단계에서 1회 다시 요청한 기록(ctx.retried)과 생성 실패(ctx.notes의 C01)를 함께 넘겨
+    "다시 요청했지만 통과하지 못함"과 "생성 실패"를 메시지와 결과에 반영한다. 자막·일정은 여기서 자동으로 고친다."""
+    summary = review.evaluate(ctx.db, ctx.run, notes=ctx.notes, retried=ctx.retried, initial=True)
+    ctx.publish({"type": "checks", "summary": summary})
+    return summary
 
 
 # ---------- 7단계 저장 ----------

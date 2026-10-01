@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app import config
-from app.api import export, manual, projects, runs, scenes, settings, sources
+from app.api import checks, export, manual, projects, prompts, runs, scenes, settings, sources
 from app.db import session
 
 
@@ -44,7 +44,8 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],  # 내보내기 파일 이름을 화면이 읽을 수 있게 한다
 )
 
-for r in (projects.router, sources.router, settings.router, runs.router, scenes.router, manual.router, export.router):
+for r in (projects.router, sources.router, settings.router, runs.router, scenes.router, manual.router, checks.router,
+          prompts.router, export.router):
     app.include_router(r)
 
 # Ollama 확인 대기 시간 2초: 같은 PC의 서버라 정상이면 수십 ms 안에 답한다. 꺼져 있을 때 화면이 오래 멈추지 않게 짧게 둔다.
