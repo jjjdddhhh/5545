@@ -2,7 +2,8 @@
 # 저장소 루트에서 실행한다. Windows에서는 setup.bat, start.bat을 더블클릭하거나,
 # VS Code에서 Ctrl+Shift+B(실행)나 "작업 실행"(설치)을 고르면 이 파일이 불린다.
 #
-#   python dev.py setup    처음 한 번: 백엔드 가상환경과 패키지, 화면 패키지, .env, MySQL DB와 사용자, 프롬프트를 준비한다
+#   python dev.py setup    (비밀번호 입력이 안 되면 python dev.py setup --show)
+#                          처음 한 번: 백엔드 가상환경과 패키지, 화면 패키지, .env, MySQL DB와 사용자, 프롬프트를 준비한다
 #   python dev.py start    백엔드(8000)와 화면(5173)을 함께 켜고 브라우저를 연다. Ctrl+C로 둘 다 끈다
 #   python dev.py check    DB, Ollama, 모델 준비 상태만 확인한다
 #
@@ -140,12 +141,18 @@ def setup_db() -> None:
     from app.db.schema_sql import table_statements, table_names  # schema.sql 하나를 기준으로 쓴다
 
     print("  MySQL root 계정으로 DB를 준비합니다. MySQL을 설치할 때 정한 root 비밀번호를 넣어 주세요.")
-    print("  (입력하는 글자는 화면에 보이지 않습니다.)")
+    if os.environ.get("DEV_SHOW_PASSWORD") != "1":
+        print("  (입력하는 글자는 화면에 보이지 않습니다. 보이지 않아도 끝까지 치고 Enter를 누르세요.")
+        print("   입력이 아예 안 되면 Ctrl+C로 멈추고 python dev.py setup --show 로 다시 실행하세요.)")
     # 비밀번호를 잘못 넣어도 처음부터 다시 실행하지 않도록 세 번까지 다시 묻는다.
     # 세 번이면 오타는 충분히 바로잡을 수 있고, 비밀번호를 정말 모르는 경우에는 끝없이 묻지 않고 멈추기 위해서다.
     conn = None
     for attempt in range(1, 4):
-        root_pw = getpass.getpass("  root 비밀번호: ")
+        if os.environ.get("DEV_SHOW_PASSWORD") == "1":
+            # --show 옵션: 일부 터미널(VS Code 작업 터미널 등)에서 감춘 입력이 받아지지 않을 때를 위해 글자를 보이게 받는다.
+            root_pw = input("  root 비밀번호(입력이 보입니다): ")
+        else:
+            root_pw = getpass.getpass("  root 비밀번호: ")
         try:
             conn = pymysql.connect(host="localhost", port=3306, user="root", password=root_pw, charset="utf8mb4",
                                    autocommit=True)
@@ -283,6 +290,10 @@ def start() -> None:
 COMMANDS = {"setup": setup, "start": start, "check": check, "_db": setup_db}
 
 if __name__ == "__main__":
+    if "--show" in sys.argv:
+        # 비밀번호를 보이게 입력한다. 환경변수로 넘겨, setup이 다시 부르는 dev.py _db(자식 프로세스)도 같은 방식으로 받게 한다.
+        os.environ["DEV_SHOW_PASSWORD"] = "1"
+        sys.argv.remove("--show")
     cmd = sys.argv[1] if len(sys.argv) > 1 else "start"
     if cmd not in COMMANDS:
         print("사용법: python dev.py [setup | start | check]")

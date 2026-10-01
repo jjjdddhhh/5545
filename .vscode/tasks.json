@@ -22,6 +22,13 @@
       "problemMatcher": []
     },
     {
+      "label": "처음 설치 - 비밀번호가 보이게 입력",
+      "type": "shell",
+      "command": "python dev.py setup --show",
+      "options": { "cwd": "${workspaceFolder}", "env": { "PYTHONUTF8": "1" } },
+      "problemMatcher": []
+    },
+    {
       "label": "상태 확인 (DB, Ollama)",
       "type": "shell",
       "command": "python dev.py check",
