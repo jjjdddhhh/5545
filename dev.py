@@ -125,7 +125,10 @@ def setup() -> None:
 
     say("5/5 프롬프트 버전 1과 DB 확인")
     run([VENV_PY, "scripts/seed_prompts.py"], cwd=BACKEND)
-    run([VENV_PY, "-m", "alembic", "stamp", "head"], cwd=BACKEND)
+    # Alembic 표시는 나중에 스키마를 바꿀 때를 위한 기록이라 앱 실행에는 필요 없다. 실패해도 설치를 멈추지 않고 알리기만 한다.
+    stamp = subprocess.run([str(VENV_PY), "-m", "alembic", "stamp", "head"], cwd=str(BACKEND))
+    if stamp.returncode != 0:
+        print("  [주의] alembic stamp head가 실패했습니다. 앱 실행에는 영향이 없으니 계속 진행합니다.")
     run([VENV_PY, "scripts/check_db.py"], cwd=BACKEND)
 
     print("\n설치가 끝났습니다. 이제 start.bat을 더블클릭하거나(또는 python dev.py start) VS Code에서 Ctrl+Shift+B로 실행하세요.")
