@@ -58,6 +58,25 @@ pytest
 - http://localhost:8000/docs 에서 API 문서를 보고 직접 호출해 볼 수 있다.
 - http://localhost:8000/api/health 에서 `db.ok`가 true인지 확인한다. Ollama를 켜 두었다면 `ollama.ok`와 `model_ready`도 true다.
 
+## 단계 2. 분량 계산, 구성안, 장면 상세 (완료)
+
+- `pipeline/budget.py`: 장면 수(목표 분량을 장면당 30초로 나눠 반올림), 장면별 시간(정수로 고르게 나눔), 내레이션 글자 수 예산(공백 제외, 분당 300자)을 계산한다.
+- `llm/schemas.py`: OutlineOut, SceneDetailOut, NarrationOut, ManualOut과 긴 원고 요약용 ChunkSummaryOut.
+- `llm/prompts/`: 단계별 프롬프트 원문(system, user 파일). `llm/prompt_store.py`가 DB의 활성 버전을 먼저 쓰고, 없으면 파일을 쓴다.
+- `scripts/seed_prompts.py`: 프롬프트와 Pydantic 출력 스키마를 prompt_template에 버전 1로 넣는다. 여러 번 실행해도 안전하다.
+- `pipeline/llm_step.py`: 모든 생성 LLM 호출의 통로. 전역 잠금으로 한 번에 하나만 보내고, 시도마다 토큰 수, 걸린 시간, 잘림 위험을 기록한다.
+- `pipeline/outline.py`, `pipeline/scene_detail.py`: 구성안 직후 C02·C03·C11, 장면 상세 직후 C11을 확인해 실패하면 그 단계만 1회 다시 요청한다. 긴 원고는 묶음별 요약 뒤 구성한다.
+- `pipeline/runner.py`, `pipeline/events.py`: 실행별 스레드, 단계별 이벤트(SSE)와 DB 기록, 다시 연결할 때의 상태 복원, 서버 재시작 때 중단된 실행 정리.
+- API: `POST /api/projects/{id}/runs`(202), `GET /api/runs/{id}/events`(SSE), `GET /api/runs/{id}`, `GET /api/runs/{id}/snapshot`, `GET /api/projects/{id}/outline`.
+- 내레이션(5a), 매뉴얼(5b), 전체 검수(6)는 자리만 만들어 두었고 단계 3~5에서 채운다.
+- 테스트 40개 통과(DB 없이 돌면 29개 통과, 11개 skip).
+
+확인 방법:
+
+- 처음 한 번 `python scripts\seed_prompts.py`를 실행해 프롬프트 버전 1을 넣는다.
+- http://localhost:8000/docs 에서 프로젝트를 만들고 원고와 조건을 넣은 뒤 `POST /api/projects/{id}/runs`를 부른다. Ollama와 qwen3:8b가 준비되어 있어야 한다.
+- 브라우저 주소창에 http://localhost:8000/api/runs/{run_id}/events 를 열면 진행 이벤트가 글자로 흘러나온다.
+
 ## 남은 단계
 
-단계 2부터 단계 8까지 남아 있다.
+단계 3부터 단계 8까지 남아 있다.

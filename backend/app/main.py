@@ -1,16 +1,36 @@
 # main.py : FastAPI 앱. CORS 설정, 라우터 등록, 상태 확인(/api/health)을 맡는다.
 # 실행(backend 폴더에서): uvicorn app.main:app --reload --port 8000
+from contextlib import asynccontextmanager
+
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app import config
-from app.api import projects, settings, sources
+from app.api import projects, runs, settings, sources
 from app.db import session
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """앱이 켜질 때 한 번 실행한다. 서버가 꺼질 때 진행 중이던 생성 실행을 실패로 정리한다.
+    DB에 연결하지 못해도 앱은 켜지게 한다(/api/health로 원인을 보여 주기 위해서다)."""
+    from app.pipeline import runner
+    try:
+        db = session.SessionLocal()
+        try:
+            runner.recover_interrupted(db)
+        finally:
+            db.close()
+    except Exception as exc:  # DB가 아직 준비되지 않은 경우
+        print(f"[시작 점검] DB에 연결하지 못해 중단된 실행 정리를 건너뜁니다: {exc}")
+    yield
+
+
 app = FastAPI(title="AI 콘텐츠 기획·제작 자동화 플랫폼",
-              description="원고로 구성안, 스토리보드, 내레이션·자막, 맞춤 매뉴얼과 일정을 만드는 프로토타입 API")
+              description="원고로 구성안, 스토리보드, 내레이션·자막, 맞춤 매뉴얼과 일정을 만드는 프로토타입 API",
+              lifespan=lifespan)
 
 # 화면(5173)과 백엔드(8000)의 포트가 달라 브라우저가 다른 출처로 본다. 화면의 출처만 허용한다(설계서 11절).
 # localhost와 127.0.0.1은 브라우저가 서로 다른 출처로 보므로 둘 다 넣는다.
@@ -24,7 +44,7 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],  # 내보내기 파일 이름을 화면이 읽을 수 있게 한다
 )
 
-for r in (projects.router, sources.router, settings.router):
+for r in (projects.router, sources.router, settings.router, runs.router):
     app.include_router(r)
 
 # Ollama 확인 대기 시간 2초: 같은 PC의 서버라 정상이면 수십 ms 안에 답한다. 꺼져 있을 때 화면이 오래 멈추지 않게 짧게 둔다.

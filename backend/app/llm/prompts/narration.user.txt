@@ -1,0 +1,6 @@
+장면 {seq}: {scene_title}
+학습 포인트: {key_point}
+화면 설명: {screen_description}
+화면 텍스트: {on_screen_text}
+근거 문단:
+{source_text}

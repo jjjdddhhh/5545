@@ -138,3 +138,58 @@ class ProjectDetail(ProjectOut):
     latest_run: Optional[RunBrief] = None
     outline: Optional[dict] = None      # 현재 구성안 요약 {id, title, scene_count}
     manual: Optional[dict] = None       # 현재 매뉴얼 요약 {id, title, step_count}
+
+
+# ---------- 생성 실행 ----------
+class RunCreated(BaseModel):
+    run_id: int            # POST /runs는 202와 이 값만 바로 돌려주고, 진행은 SSE로 따로 본다(설계서 6절)
+
+
+# ---------- 구성안과 장면 (GET /api/projects/{id}/outline) ----------
+class CueOut(ORM):
+    id: int
+    seq: int
+    start_ms: int          # 장면 시작 기준. SRT로 내보낼 때 앞 장면 시간을 더해 누적한다
+    end_ms: int
+    body: str              # 줄바꿈("\n") 포함 최대 2줄
+
+
+class NarrationOut(ORM):
+    id: int
+    body: str
+    char_count: int        # 공백을 뺀 글자 수
+    est_duration_sec: float
+    is_edited: bool        # 사용자가 고친 내레이션이면 장면 재생성 때 덮어쓰지 않는다
+
+
+class SceneOut(ORM):
+    id: int
+    seq: int
+    title: str
+    key_point: str
+    source_paragraphs: list[str]
+    screen_description: Optional[str] = None
+    visual_suggestion: Optional[str] = None
+    on_screen_text: Optional[str] = None
+    duration_sec: int
+    char_budget: int
+    edited_fields: list[str] = Field(default_factory=list)
+    start_sec: int = 0                     # 영상 전체에서 이 장면이 시작하는 시각(초). 앞 장면 시간의 합이다
+    narration: Optional[NarrationOut] = None
+    cues: list[CueOut] = Field(default_factory=list)
+    check_status: str = "none"             # 이 장면에 걸린 자동 검수의 가장 나쁜 결과(pass, warn, fail, none). 장면 목록의 점 색
+
+
+class OutlineInfo(ORM):
+    id: int
+    run_id: int
+    title: str
+    summary: str
+    learning_objectives: list[str]
+    created_at: datetime
+
+
+class OutlineView(BaseModel):
+    outline: OutlineInfo
+    scenes: list[SceneOut]
+    total_sec: int                         # 장면 시간의 합(영상 전체 길이)

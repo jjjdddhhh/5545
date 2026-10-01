@@ -1,0 +1,7 @@
+콘텐츠 제목: {outline_title}
+장면 {seq}: {scene_title}
+학습 포인트: {key_point}
+장면 시간: {duration_sec}초
+고정 필드(바꾸지 않는다): {fixed_fields}
+근거 문단:
+{source_text}
