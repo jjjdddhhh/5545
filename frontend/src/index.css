@@ -1,0 +1,18 @@
+/* index.css : Tailwind CSS v4 진입점과 전역 기본 스타일.
+   Tailwind v4는 @import 한 줄로 기본 스타일과 유틸리티 클래스를 모두 불러온다. */
+@import "tailwindcss";
+
+/* 한글이 고르게 보이도록 운영체제별 기본 한글 글꼴을 앞에 둔다.
+   웹 글꼴을 따로 내려받지 않는 이유는 노트북 localhost에서 인터넷 없이도 화면이 바로 떠야 하기 때문이다. */
+html,
+body {
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* 한국어 문장은 단어 중간에서 줄이 바뀌면 읽기 어렵다. 어절 단위로 줄을 바꾸게 한다. */
+body {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
