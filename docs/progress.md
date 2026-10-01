@@ -140,7 +140,7 @@ pytest
 
 확인 방법: 결과 작업공간 맨 아래 "수정 요청"에 "3번 장면을 초보자용으로 더 쉽게 바꿔 줘"를 입력하고 보낸다. 실제 모델(qwen3:8b)과 Ollama가 켜져 있어야 한다.
 
-## 단계 8. 실제 모델 확인과 평가 도구 (스크립트 완료)
+## 단계 8. 실제 모델 확인과 평가 도구 (완료, 실행은 사용자)
 
 - `docs/eval/sample_drill.txt`: 합성 샘플 원고(전동드릴 안전교육, 1,475자, 제목·목록·표 포함).
 - `scripts/smoke_ollama.py`: 실제 모델로 한 번 생성해 단계별 표를 출력한다. `--model`로 qwen3:8b와 exaone3.5:7.8b를 비교한다.
@@ -153,3 +153,26 @@ pytest
 ## 남은 단계
 
 구현 단계는 모두 끝났다. 위의 "사용자가 직접 할 일"과 아래 목록을 진행한다.
+
+## 사용자가 직접 할 일 (구현 이후)
+
+1. 위의 "사용자가 직접 할 일(사용자 PC)"대로 MySQL DB와 `.env`를 준비하고 `python scripts\check_db.py`, `python scripts\seed_prompts.py`, `alembic stamp head`를 실행한다.
+2. Ollama에서 모델을 받는다: `ollama pull qwen3:8b`, 비교용 `ollama pull exaone3.5:7.8b`.
+3. 실제 모델 확인을 실행하고 출력 전체를 PROMPT.md의 "3. 실제 모델 확인" 프롬프트에 붙인다(GPU 이름과 VRAM도 적는다).
+   - `python scripts\smoke_ollama.py --model qwen3:8b --save ..\docs\eval\smoke_qwen3.json`
+   - `python scripts\smoke_ollama.py --model exaone3.5:7.8b --save ..\docs\eval\smoke_exaone.json`
+4. 백엔드(`uvicorn app.main:app --reload --port 8000`)와 화면(`npm run dev`)을 켜고 http://localhost:5173 에서 샘플 원고(`docs/eval/sample_drill.txt`)로 전체 흐름을 직접 써 본다. 생성 결과의 사람 확인(H01~H03)을 체크한다.
+5. `docs/eval/requests.json`의 기대 결과 20개를 읽고 고친 뒤 `expected_confirmed`를 true로 바꾼다. 그다음 `python scripts\run_eval.py --prepare`로 평가하고 PROMPT.md의 "6. 수정 요청 에이전트 평가"를 쓴다.
+6. 호롱불 원고와 규칙을 받으면 PROMPT.md의 4번과 5번 프롬프트를 쓴다. 경고·과장 표현 목록(`backend/app/rules/`)은 초안이다.
+7. 결과보고서 지표는 `python scripts\report_metrics.py --out ..\docs\eval\metrics.md`로 뽑는다.
+
+## 정해 주면 좋은 것
+
+- 사용자가 "+ 장면 추가"로 만든 장면도 근거 문단이 없으면 C03 경고, 장면 수가 바뀌면 C02 경고가 뜬다. 설계대로 두었지만, 사용자가 만든 장면은 경고에서 뺄지 정해 주면 반영한다.
+- 생성 진행 화면은 아주 빨리 끝난 단계의 소요 시간을 비워 보여 준다(다시 연결할 때 보내는 상태에 단계별 시간이 없다). 필요하면 상태에 단계별 시간을 더한다.
+
+## 테스트 현황
+
+- 백엔드: `TEST_DATABASE_URL`이 있으면 97개 모두 통과, 없으면 65개 통과와 32개 skip.
+- 화면: `npm run build` 통과.
+
