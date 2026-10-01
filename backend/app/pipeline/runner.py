@@ -26,8 +26,9 @@ from app.db import session as db_session
 from app.llm import llm_client
 from app.llm.prompt_store import active_prompt
 from app.pipeline import budget as budget_mod
-from app.pipeline import checks
+from app.pipeline import checks, persist
 from app.pipeline.events import hub
+from app.pipeline.narration import NarrationInput, generate_narration
 from app.pipeline.outline import generate_outline
 from app.pipeline.scene_detail import SceneInput, generate_scene_detail
 
@@ -319,9 +320,39 @@ def apply_detail(sc: m.Scene, detail) -> None:
             setattr(sc, f, getattr(detail, f))
 
 
-# ---------- 5a, 5b, 6단계는 다음 구현 단계에서 채운다 ----------
+# ---------- 5a단계 내레이션·자막 ----------
 def stage_narration(ctx: RunContext) -> dict:
-    return {"skipped": "단계 3에서 구현한다"}
+    """장면마다 내레이션을 쓰고 자막을 코드로 나눈다. 장면 상세처럼 한 장면이 실패해도 실행은 이어 간다."""
+    prompt = active_prompt(ctx.db, "narration")
+    scenes = ctx.scenes()
+    failed = cues = 0
+    for i, sc in enumerate(scenes, 1):
+        ctx.publish({"type": "progress", "stage": "narration", "current": i, "total": len(scenes),
+                     "scene_id": sc.id, "title": sc.title})
+        try:
+            res = generate_narration(ctx.recorder, prompt, ctx.setting, narration_input(sc),
+                                     ctx.paragraphs_by_id, ref=sc.id)
+        except llm_client.GenerationError as exc:
+            failed += 1
+            ctx.notes.append(checks.CheckResult("C01", checks.FAIL, f"장면 {sc.seq} 내레이션 생성 실패: {exc}",
+                                                "scene", sc.id))
+            continue
+        narr = persist.save_narration(ctx.db, sc, res.text, ctx.setting)
+        ctx.db.commit()
+        cues += len(narr.cues)
+        for f in res.failures:            # 내레이션 행이 생긴 뒤에야 id를 알 수 있어 여기서 대상을 채운다
+            f.target_ref = narr.id
+            ctx.notes.append(f)
+        if res.retried:
+            ctx.retried.update({("C04", "narration", narr.id), ("C11", "narration", narr.id)})
+    return {"scenes": len(scenes), "failed": failed, "cues": cues}
+
+
+def narration_input(sc: m.Scene) -> NarrationInput:
+    return NarrationInput(seq=sc.seq, title=sc.title, key_point=sc.key_point,
+                          screen_description=sc.screen_description, on_screen_text=sc.on_screen_text,
+                          duration_sec=sc.duration_sec, char_budget=sc.char_budget,
+                          source_paragraphs=list(sc.source_paragraphs or []))
 
 
 def stage_manual(ctx: RunContext) -> dict:

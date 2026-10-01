@@ -193,3 +193,9 @@ class OutlineView(BaseModel):
     outline: OutlineInfo
     scenes: list[SceneOut]
     total_sec: int                         # 장면 시간의 합(영상 전체 길이)
+
+
+# ---------- 직접 수정 ----------
+class NarrationPatch(BaseModel):
+    # narration.body는 TEXT(최대 65,535바이트)다. 한글 3바이트 기준 2만 자 안쪽이면 안전하다.
+    body: str = Field(min_length=1, max_length=20000)

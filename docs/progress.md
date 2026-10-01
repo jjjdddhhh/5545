@@ -77,6 +77,19 @@ pytest
 - http://localhost:8000/docs 에서 프로젝트를 만들고 원고와 조건을 넣은 뒤 `POST /api/projects/{id}/runs`를 부른다. Ollama와 qwen3:8b가 준비되어 있어야 한다.
 - 브라우저 주소창에 http://localhost:8000/api/runs/{run_id}/events 를 열면 진행 이벤트가 글자로 흘러나온다.
 
+## 단계 3. 내레이션, 자막, SRT (완료)
+
+- `pipeline/narration.py`: 장면별 내레이션을 글자 수 예산(공백 제외)에 맞춰 생성한다. 직후 C04(±15%)와 C11을 확인해 실패하면 그 장면만 1회 다시 요청한다. 괄호 지시문과 머리말은 코드로 지운다.
+- `pipeline/subtitles.py`: 한 줄 16자, 최대 2줄, 단어 중간에서 끊지 않고, 문장마다 따로, 큐 길이와 두 줄 길이를 고르게 나눈다. 장면 시간을 글자 수에 비례해 배분하고 마지막 큐는 장면 끝에 정확히 맞춘다.
+- `pipeline/persist.py`: 내레이션 저장과 자막 재분할, 수정 이력, edited_fields 기록을 한곳에 모았다.
+- `export/srt.py`와 `GET /api/projects/{id}/export?format=srt`: 장면 시작 기준 시간을 영상 전체 기준으로 누적한다.
+- `PATCH /api/narrations/{id}`: LLM 없이 자막을 즉시 다시 나누고 revision을 남기며, is_edited를 true로 바꾼다.
+- 테스트 57개 통과.
+
+확인 방법:
+
+- 영상형이나 둘 다로 생성한 뒤 http://localhost:8000/api/projects/{id}/export?format=srt 를 열면 SRT 파일이 내려받아진다. 영상 편집기(예: 다빈치 리졸브, 프리미어)에 불러와 자막이 장면 시간에 맞는지 본다.
+
 ## 남은 단계
 
-단계 3부터 단계 8까지 남아 있다.
+단계 4부터 단계 8까지 남아 있다.
