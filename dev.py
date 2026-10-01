@@ -36,7 +36,6 @@ NPM = "npm.cmd" if IS_WIN else "npm"
 
 DB_NAME = "content_ai"
 DB_USER = "content_ai"
-BACKEND_URL = "http://localhost:8000"
 FRONTEND_URL = "http://localhost:5173"
 
 
@@ -220,7 +219,9 @@ def check_ollama(verbose: bool = False) -> bool:
     host = env.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
     model = env.get("OLLAMA_MODEL", "qwen3:8b")
     try:
-        with urllib.request.urlopen(f"{host}/api/tags", timeout=2) as r:
+        # 프록시를 거치지 않게 빈 ProxyHandler를 쓴다. Windows 시스템 프록시가 localhost 요청을 가로채 틀린 경고가 나는 것을 막는다.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(f"{host}/api/tags", timeout=2) as r:
             body = r.read().decode("utf-8")
     except Exception:
         print(f"\n[주의] Ollama({host})에 연결하지 못했습니다. 화면은 쓸 수 있지만 생성은 안 됩니다."
@@ -242,15 +243,28 @@ def check() -> None:
 
 
 # ---------- start ----------
-def wait_http(url: str, seconds: int) -> bool:
-    """url이 응답할 때까지 최대 seconds초 기다린다."""
+def port_open(port: int) -> bool:
+    """그 포트에서 서버가 연결을 받는지 본다. IPv4(127.0.0.1)와 IPv6(::1)를 둘 다 시도한다.
+    HTTP 요청(urllib) 대신 소켓으로 직접 붙어 보는 이유: Windows에서는 urllib가 시스템 프록시 설정을 따라 localhost 요청을
+    프록시로 보내거나, localhost를 ::1과 127.0.0.1 가운데 서버가 듣지 않는 쪽으로 먼저 풀어 실패하는 일이 있었다.
+    백엔드(uvicorn)는 127.0.0.1에서, 화면(Vite)은 Node 버전에 따라 ::1에서만 들을 수 있어 둘 다 확인한다."""
+    import socket
+    for host in ("127.0.0.1", "::1"):
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def wait_ports(ports: list[int], seconds: int) -> bool:
+    """모든 포트가 열릴 때까지 최대 seconds초 기다린다."""
     end = time.time() + seconds
     while time.time() < end:
-        try:
-            urllib.request.urlopen(url, timeout=1)
+        if all(port_open(p) for p in ports):
             return True
-        except Exception:
-            time.sleep(0.5)
+        time.sleep(0.5)
     return False
 
 
@@ -284,11 +298,13 @@ def start() -> None:
         subprocess.Popen([NPM, "run", "dev"], cwd=str(FRONTEND)),
     ]
     try:
-        if wait_http(f"{BACKEND_URL}/api/health", 40) and wait_http(FRONTEND_URL, 40):
+        if wait_ports([8000, 5173], 40):
             print(f"\n준비되었습니다. 브라우저에서 {FRONTEND_URL} 을 엽니다.", flush=True)
-            open_in_system_browser(FRONTEND_URL)
         else:
-            print("\n[주의] 서버가 40초 안에 켜지지 않았습니다. 위의 오류 메시지를 확인해 주세요.", flush=True)
+            # 확인에 실패해도 서버는 켜져 있는 경우가 많으므로 브라우저는 연다. 화면이 안 뜨면 위의 오류를 보면 된다.
+            print(f"\n[주의] 서버가 준비됐는지 40초 안에 확인하지 못했습니다. 그래도 브라우저를 엽니다."
+                  f" 화면이 뜨지 않으면 위의 오류 메시지를 확인해 주세요.", flush=True)
+        open_in_system_browser(FRONTEND_URL)
         while all(p.poll() is None for p in procs):   # 둘 중 하나라도 꺼지면 함께 끈다
             time.sleep(1)
         print("\n[주의] 서버 하나가 멈췄습니다. 위의 오류 메시지를 확인해 주세요.")
