@@ -4,11 +4,14 @@
 import { api } from "./client";
 import type {
   ChecksView,
+  EditRequestCreated,
+  EditRequestOut,
   HealthView,
   ManualStepPatch,
   ManualView,
   OutlineView,
   ParagraphIn,
+  ProposalOut,
   ProjectDetail,
   ProjectListItem,
   ProjectOut,
@@ -39,6 +42,8 @@ export const qk = {
   manual: (id: number) => ["manual", id] as const,
   checks: (runId: number) => ["checks", runId] as const,
   run: (runId: number) => ["run", runId] as const,
+  editRequests: (projectId: number) => ["edit-requests", projectId] as const,
+  proposals: (editRequestId: number) => ["proposals", editRequestId] as const,
 };
 
 // ---------- 상태 확인 ----------
@@ -106,3 +111,20 @@ export const getChecks = (runId: number) => api.get<ChecksView>(`/api/runs/${run
 export const recheck = (runId: number) => api.post<ChecksView>(`/api/runs/${runId}/checks/recheck`);
 export const setHumanCheck = (runId: number, code: string, checked: boolean) =>
   api.put<ChecksView>(`/api/runs/${runId}/human-checks/${code}`, { checked });
+
+// ---------- 수정 요청 에이전트(설계서 13절) ----------
+
+/** 자연어 수정 요청 보내기. 202와 요청 id만 바로 돌아오고, 에이전트의 진행은 SSE(/api/edit-requests/{id}/events)로 본다. */
+export const createEditRequest = (projectId: number, requestText: string) =>
+  api.post<EditRequestCreated>(`/api/projects/${projectId}/edit-requests`, { request_text: requestText });
+/** 프로젝트의 수정 요청 이력(최근 것부터 20개). 화면을 다시 열었을 때 마지막 요청을 이어서 보여 주는 데 쓴다. */
+export const listEditRequests = (projectId: number) =>
+  api.get<EditRequestOut[]>(`/api/projects/${projectId}/edit-requests`);
+/** 요청 하나가 만든 변경 제안 목록(바뀌기 전과 후, 자막 미리보기, 제안 검수 결과 포함). */
+export const getProposals = (editRequestId: number) =>
+  api.get<ProposalOut[]>(`/api/edit-requests/${editRequestId}/proposals`);
+/** 제안 승인. 제안을 만든 뒤 내용이 바뀌었으면 409가 온다. */
+export const acceptProposal = (proposalId: number) => api.post<ProposalOut>(`/api/proposals/${proposalId}/accept`);
+/** 제안 거절. 사유는 선택이며 서버가 요청 요약 끝에 남긴다. */
+export const rejectProposal = (proposalId: number, reason?: string) =>
+  api.post<ProposalOut>(`/api/proposals/${proposalId}/reject`, { reason: reason || null });

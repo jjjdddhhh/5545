@@ -2,7 +2,7 @@
 // - 맨 위 줄: 프로젝트 제목, "전체 다시 생성"(조건 설정 화면으로 이동), "같은 조건으로 다시 생성", "내보내기"(강조).
 // - 탭 다섯 개: 구성안, 스토리보드, 내레이션·자막, 매뉴얼·일정, 검수.
 // - 스토리보드와 내레이션·자막 탭의 본문은 세 칸이다. 왼쪽은 장면 목록, 가운데는 선택한 장면 편집, 오른쪽은 검수 패널이다.
-// - 맨 아래에는 수정 요청 에이전트 자리(EditRequestPanel)를 둔다. 단계 7에서 기능을 붙인다.
+// - 맨 아래에는 수정 요청 에이전트(EditRequestPanel)를 둔다. 요청 입력, 도구 진행, 제안 승인·거절을 맡는다.
 //
 // 데이터는 네 쿼리로 나눠 받는다: 프로젝트 요약(qk.project), 구성안(qk.outline), 매뉴얼(qk.manual, 매뉴얼 탭에서만),
 // 검수(qk.checks(runId)). 나눠 두어야 수정 뒤에 바뀐 쿼리만 무효화할 수 있다(설계서 5절).
@@ -267,8 +267,14 @@ export default function WorkspacePage() {
         </>
       )}
 
-      {/* 단계 7: 수정 요청 에이전트 */}
-      <EditRequestPanel projectId={pid} runId={runId} />
+      {/* 단계 7: 수정 요청 에이전트. 제안의 대상을 누르면 그 장면(또는 매뉴얼 탭)으로 이동한다. */}
+      <EditRequestPanel
+        projectId={pid}
+        runId={runId}
+        onShowTarget={({ sceneId, manual }) =>
+          manual ? setView({ tab: "manual" }) : sceneId ? setView({ tab: "storyboard", scene: sceneId }) : undefined
+        }
+      />
     </div>
   );
 }

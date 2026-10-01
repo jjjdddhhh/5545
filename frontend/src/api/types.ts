@@ -424,3 +424,80 @@ export interface HealthView {
   db: { ok: boolean; version?: string; detail?: string };
   ollama: { ok: boolean; model: string; models?: string[]; model_ready?: boolean; detail?: string };
 }
+
+// ---------- 수정 요청 에이전트(schemas.py 수정 요청 부분, 설계서 13절) ----------
+
+/** 수정 요청 상태. running(처리 중), proposed(제안 있음), refused(제안 없이 끝남), limit(도구 호출 한도), failed(실패), done(제안을 모두 처리함). */
+export type EditStatus = "running" | "proposed" | "refused" | "limit" | "failed" | "done";
+
+/** 에이전트가 부른 도구 하나(agent_action 한 줄). status의 blocked는 가드레일이 막은 호출이다. */
+export interface AgentActionOut {
+  id?: number;
+  seq: number;
+  tool_name: string;
+  label: string;
+  arguments: Record<string, unknown> | unknown[] | null;
+  result_summary: string | null;
+  status: "ok" | "error" | "blocked";
+  latency_ms: number | null;
+}
+
+/** 수정 요청 한 건과 지금까지의 도구 호출 목록(schemas.EditRequestOut). */
+export interface EditRequestOut {
+  id: number;
+  project_id: number;
+  request_text: string;
+  status: EditStatus;
+  tool_calls: number;
+  summary: string | null;
+  llm_model: string;
+  created_at: string;
+  finished_at: string | null;
+  actions: AgentActionOut[];
+}
+
+export interface EditRequestCreated {
+  edit_request_id: number;
+}
+
+/** 제안 검수 결과 한 줄. 통과하면 code가 "ALL"인 한 줄만 온다. */
+export interface ProposalCheck {
+  code: string;
+  result: string;
+  message: string;
+}
+
+/** 변경 제안 하나(schemas.ProposalOut). before_value와 after_value를 나란히 보여 주고 승인이나 거절을 받는다. */
+export interface ProposalOut {
+  id: number;
+  edit_request_id: number;
+  target_type: "scene" | "narration" | "manual_step";
+  target_id: number;
+  field_name: string;
+  field_label: string;
+  target_label: string;
+  scene_id: number | null;
+  before_value: string | null;
+  after_value: string;
+  current_value: string | null;
+  stale: boolean;
+  reason: string | null;
+  user_edited: boolean;
+  status: "pending" | "accepted" | "rejected";
+  decided_at: string | null;
+  subtitle_preview: string[];
+  checks: { ok?: boolean; results?: ProposalCheck[] };
+}
+
+/** 수정 요청 SSE 이벤트. 처음에는 snapshot(요청 전체), 그다음 도구마다 tool, 끝나면 done이 온다. */
+export interface EditSnapshotEvent extends EditRequestOut {
+  type: "snapshot";
+}
+export interface EditToolEvent extends AgentActionOut {
+  type: "tool";
+}
+export interface EditDoneEvent {
+  type: "done";
+  status: EditStatus;
+  summary: string | null;
+}

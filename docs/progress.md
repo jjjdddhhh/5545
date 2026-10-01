@@ -130,12 +130,15 @@ pytest
 
 확인 방법: backend에서 `uvicorn app.main:app --reload --port 8000`, frontend에서 `npm run dev`를 실행한 뒤 http://localhost:5173 을 연다.
 
-## 단계 7. 수정 요청 에이전트 연결 (백엔드 완료, 화면 남음)
+## 단계 7. 수정 요청 에이전트 연결 (완료)
 
 - `agent/repo.py`: edit_agent.py의 Repo 프로토콜을 SQLAlchemy로 구현했다. 현재 구성안·매뉴얼만 볼 수 있고, split_subtitles는 단계 3의 함수, check는 단계 5의 검수 함수(C04, C06, C08, C11, C12)를 쓴다.
 - `agent/service.py`: 백그라운드 스레드 실행, 도구 호출마다 agent_action 저장과 SSE 알림, 제안 저장(내레이션은 내레이션 id로), 승인(필드 반영, revision, 내레이션이면 자막 재분할, 다시 검수)과 거절.
 - API: `POST /api/projects/{id}/edit-requests`(202), `GET /api/edit-requests/{id}/events`(SSE), `GET /api/edit-requests/{id}/proposals`, `POST /api/proposals/{id}/accept`, `POST /api/proposals/{id}/reject`, 그리고 `GET /api/edit-requests/{id}`, `GET /api/projects/{id}/edit-requests`.
-- 남은 일: 결과 작업공간의 수정 요청 입력창, 도구 진행 표시, 제안별 전후 비교와 승인·거절 버튼.
+- 화면(`frontend/src/components/workspace/EditRequestPanel.tsx`, `hooks/useEditEvents.ts`): 결과 작업공간 아래에 수정 요청 입력창(예시 문장, Ctrl+Enter), 에이전트가 부르는 도구의 진행 표시(SSE), 제안별 전후 비교, 내레이션 제안의 자막 미리보기, 제안 검수 결과, 승인·거절(사유 입력) 버튼을 붙였다. 사용자가 고친 필드에 대한 제안과 내용이 바뀐 제안에는 경고를 띄운다. 제안의 대상을 누르면 그 장면으로 이동하고, 이전 요청을 골라 남은 제안을 처리할 수 있다.
+- 가짜 모델을 붙인 백엔드와 브라우저(Playwright)로 요청, 도구 진행, 제안 승인과 거절, 대상 장면 이동을 확인했다.
+
+확인 방법: 결과 작업공간 맨 아래 "수정 요청"에 "3번 장면을 초보자용으로 더 쉽게 바꿔 줘"를 입력하고 보낸다. 실제 모델(qwen3:8b)과 Ollama가 켜져 있어야 한다.
 
 ## 단계 8. 실제 모델 확인과 평가 도구 (스크립트 완료)
 
@@ -149,4 +152,4 @@ pytest
 
 ## 남은 단계
 
-단계 6 화면과 단계 7 화면 부분이 남아 있다.
+구현 단계는 모두 끝났다. 위의 "사용자가 직접 할 일"과 아래 목록을 진행한다.
