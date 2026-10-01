@@ -142,5 +142,7 @@ export async function downloadFile(path: string, fallbackName: string): Promise<
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  // 주소를 곧바로 풀면 일부 브라우저가 내려받기를 시작하기 전에 내용을 잃어 파일 이름이 "download"로 바뀌거나 실패한다.
+  // 1분 뒤에 풀어도 메모리 부담은 내보내기 파일 하나 크기뿐이라 넉넉하게 기다린다.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

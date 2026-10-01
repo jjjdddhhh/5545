@@ -12,7 +12,7 @@ import { RESULT_LABEL, RUN_STATUS_LABEL } from "../lib/labels";
  */
 export function btn(variant: "primary" | "secondary" | "ghost" | "danger" = "secondary", size: "sm" | "md" = "md"): string {
   const base =
-    "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition disabled:cursor-not-allowed disabled:opacity-50";
   const sizes = { sm: "px-2 py-1 text-xs", md: "px-3.5 py-2 text-sm" };
   const variants = {
     primary: "bg-indigo-600 text-white shadow-sm hover:bg-indigo-700",

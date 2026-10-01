@@ -136,8 +136,8 @@ class ProjectDetail(ProjectOut):
     source: Optional[dict] = None       # 최근 원고 요약 {id, char_count, paragraph_count, file_name}
     setting: Optional[SettingOut] = None
     latest_run: Optional[RunBrief] = None
-    outline: Optional[dict] = None      # 현재 구성안 요약 {id, title, scene_count}
-    manual: Optional[dict] = None       # 현재 매뉴얼 요약 {id, title, step_count}
+    outline: Optional[dict] = None      # 현재 구성안 요약 {id, title, scene_count, run_id}
+    manual: Optional[dict] = None       # 현재 매뉴얼 요약 {id, title, step_count, run_id}
 
 
 # ---------- 생성 실행 ----------

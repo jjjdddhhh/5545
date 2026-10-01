@@ -120,9 +120,15 @@ pytest
 - 생성 후 http://localhost:8000/api/runs/{run_id}/checks 에서 항목별 결과와 통과율(summary.pass_rate)을 본다.
 - `app/rules/`의 표현 목록을 고친 뒤 `POST /api/runs/{run_id}/checks/recheck`로 다시 검수해 본다.
 
-## 단계 6. 화면 (진행 중)
+## 단계 6. 화면 (완료)
 
-백그라운드에서 만드는 중이다. 끝나면 이 절을 채운다.
+- `frontend/`: Vite, React 19, TypeScript, TanStack Query, Tailwind v4, react-router-dom으로 화면 5개를 만들었다. 모든 문구는 한국어다.
+  - `/projects` 프로젝트 목록(만들기, 검색, 최근 실행 상태), `/projects/:id/source` 자료 입력(원문과 정제본 비교, 문단 합치기·나누기·종류 바꾸기), `/projects/:id/settings` 조건 설정(고급 설정은 접힘, 장면 수·글자 수 미리보기), `/runs/:runId` 생성 진행(SSE, 단계별 상태, LLM 호출 기록, 실패 사유), `/projects/:id/workspace` 결과 작업공간.
+  - 결과 작업공간: 제목과 "전체 다시 생성", "내보내기"(SRT, DOCX, CSV, ICS, JSON), 탭 다섯 개, 왼쪽 장면 목록(검수 상태 점, 드래그 순서 변경, 장면 추가), 가운데 편집 영역("이 장면만 다시 생성", "수정 저장"), 오른쪽 검수 패널(자동 검수, 사람 확인 체크박스).
+- API 주소는 `frontend/.env`의 `VITE_API_BASE`(기본 http://localhost:8000)다. `npm run build`가 통과한다.
+- 가짜 LLM을 붙인 실제 백엔드에서 Playwright로 전체 흐름(만들기, 원고, 조건, 생성, 편집, 재생성, 장면 추가와 순서 변경, 매뉴얼·일정 수정, 검수, 내보내기)을 확인했다.
+
+확인 방법: backend에서 `uvicorn app.main:app --reload --port 8000`, frontend에서 `npm run dev`를 실행한 뒤 http://localhost:5173 을 연다.
 
 ## 단계 7. 수정 요청 에이전트 연결 (백엔드 완료, 화면 남음)
 

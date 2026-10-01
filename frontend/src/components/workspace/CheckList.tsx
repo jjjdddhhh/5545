@@ -1,5 +1,6 @@
 // CheckList.tsx : 검수 항목 목록과 사람 확인 체크박스.
 // 결과 작업공간의 오른쪽 검수 패널과 "검수" 탭이 함께 쓴다.
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { qk, setHumanCheck } from "../../api/endpoints";
 import type { CheckItem, ChecksView } from "../../api/types";
@@ -42,9 +43,18 @@ export function AutoCheckList({ items, compact = false, empty }: { items: CheckI
  */
 export function HumanChecks({ runId, items }: { runId: number; items: CheckItem[] }) {
   const queryClient = useQueryClient();
+  // 누른 즉시 체크 표시를 바꿔 두는 낙관적 값(코드별). 응답이 오면 지운다.
+  // 요청 상태(isPending)는 한 박자 늦게 반영되어 그 사이 체크가 잠깐 풀려 보이므로, 클릭 순간에 바로 쓰는 값을 따로 둔다.
+  const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});
   const toggle = useMutation({
     mutationFn: ({ code, checked }: { code: string; checked: boolean }) => setHumanCheck(runId, code, checked),
     onSuccess: (view: ChecksView) => queryClient.setQueryData(qk.checks(runId), view),
+    onSettled: (_data, _err, vars) =>
+      setOptimistic((o) => {
+        const next = { ...o };
+        delete next[vars.code];
+        return next;
+      }),
   });
 
   return (
@@ -52,16 +62,20 @@ export function HumanChecks({ runId, items }: { runId: number; items: CheckItem[
       <ul className="space-y-1.5">
         {items.map((c) => {
           const checked = c.result === "pass";
-          const pending = toggle.isPending && toggle.variables?.code === c.check_code;
+          const shown = optimistic[c.check_code] ?? checked;
           return (
             <li key={c.id}>
               <label className="flex cursor-pointer items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-indigo-600"
-                  checked={pending ? Boolean(toggle.variables?.checked) : checked}
+                  checked={shown}
                   disabled={toggle.isPending}
-                  onChange={(e) => toggle.mutate({ code: c.check_code, checked: e.target.checked })}
+                  onChange={(e) => {
+                    const value = e.target.checked;
+                    setOptimistic((o) => ({ ...o, [c.check_code]: value }));
+                    toggle.mutate({ code: c.check_code, checked: value });
+                  }}
                 />
                 <span className="font-mono text-xs text-slate-400">{c.check_code}</span>
                 <span className="text-slate-800">{c.label}</span>
