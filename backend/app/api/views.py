@@ -2,7 +2,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.schemas import CueOut, NarrationOut, OutlineInfo, OutlineView, SceneOut
+from app.api.schemas import CueOut, ManualView, NarrationOut, OutlineInfo, OutlineView, SceneOut
 from app.db import models as m
 
 # 검수 결과의 나쁜 정도. 장면의 점 색은 그 장면에 걸린 결과 가운데 가장 나쁜 것을 쓴다.
@@ -49,3 +49,31 @@ def outline_view(db: Session, outline: m.Outline) -> OutlineView:
         out.append(scene_out(sc, start, status.get(sc.id, "none")))
         start += sc.duration_sec
     return OutlineView(outline=OutlineInfo.model_validate(outline), scenes=out, total_sec=start)
+
+
+def step_check_status(db: Session, run_id: int, steps: list[m.ManualStep]) -> dict[int, str]:
+    rows = db.execute(select(m.ReviewCheck.target_id, m.ReviewCheck.result)
+                      .where(m.ReviewCheck.run_id == run_id, m.ReviewCheck.check_code.like("C%"),
+                             m.ReviewCheck.target_type == "manual_step")).all()
+    found: dict[int, list[str]] = {st.id: [] for st in steps}
+    for tid, result in rows:
+        if tid in found:
+            found[tid].append(result)
+    return {sid: worst(rs) for sid, rs in found.items()}
+
+
+def manual_view(db: Session, manual: m.Manual) -> ManualView:
+    from app.api.schemas import CautionOut, ManualInfo, ManualStepOut, ScheduleItemOut
+    steps = list(manual.steps)
+    status = step_check_status(db, manual.run_id, steps)
+    step_out = []
+    for st in steps:
+        o = ManualStepOut.model_validate(st)
+        o.edited_fields = list(st.edited_fields or [])
+        o.check_status = status.get(st.id, "none")
+        step_out.append(o)
+    schedule = [ScheduleItemOut.model_validate(it) for it in manual.schedule]
+    total = max((it.start_offset_day + it.duration_days for it in manual.schedule), default=0)
+    return ManualView(manual=ManualInfo.model_validate(manual), steps=step_out,
+                      cautions=[CautionOut.model_validate(c) for c in manual.cautions],
+                      schedule=schedule, total_days=total)

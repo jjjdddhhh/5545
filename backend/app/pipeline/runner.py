@@ -28,9 +28,11 @@ from app.llm.prompt_store import active_prompt
 from app.pipeline import budget as budget_mod
 from app.pipeline import checks, persist
 from app.pipeline.events import hub
+from app.pipeline.manual import generate_manual, outline_text
 from app.pipeline.narration import NarrationInput, generate_narration
 from app.pipeline.outline import generate_outline
 from app.pipeline.scene_detail import SceneInput, generate_scene_detail
+from app.pipeline.schedule import layout
 
 # 단계 이름(이벤트와 current_stage에 쓰는 키)과 화면에 보여 줄 한국어 이름. 순서가 곧 실행 순서다.
 STAGES: list[tuple[str, str]] = [
@@ -355,8 +357,52 @@ def narration_input(sc: m.Scene) -> NarrationInput:
                           source_paragraphs=list(sc.source_paragraphs or []))
 
 
+# ---------- 5b단계 맞춤 매뉴얼·일정 ----------
 def stage_manual(ctx: RunContext) -> dict:
-    return {"skipped": "단계 4에서 구현한다"}
+    """매뉴얼, 주의사항, 일정을 만든다. 매뉴얼 생성이 실패해도 영상형 결과를 살리기 위해 실행은 멈추지 않고 C01 실패로 남긴다."""
+    prompt = active_prompt(ctx.db, "manual")
+    o = ctx.outline
+    summary = outline_text(o.title, o.summary, list(o.learning_objectives or []),
+                           [(sc.seq, sc.title, sc.key_point) for sc in ctx.scenes()])
+    try:
+        res = generate_manual(ctx.recorder, prompt, ctx.setting, summary, ctx.paragraphs)
+    except llm_client.GenerationError as exc:
+        ctx.notes.append(checks.CheckResult("C01", checks.FAIL, f"매뉴얼 생성 실패: {exc}", "run", ctx.run.id))
+        return {"failed": True}
+    out = res.manual
+    manual = m.Manual(run_id=ctx.run.id, project_id=ctx.run.project_id, audience=ctx.setting.audience,
+                      difficulty=ctx.setting.difficulty, title=out.title[:200], intro=out.intro,
+                      is_current=False)   # 7단계에서 현재 결과로 바꾼다
+    ctx.db.add(manual)
+    steps_by_seq: dict[int, m.ManualStep] = {}
+    for st in out.steps:
+        row = m.ManualStep(manual=manual, seq=st.seq, title=st.title[:200], instruction=st.instruction,
+                           tip=st.tip, source_paragraphs=list(st.source_paragraphs), edited_fields=[])
+        ctx.db.add(row)
+        steps_by_seq[st.seq] = row
+    for c in out.cautions:
+        ctx.db.add(m.Caution(manual=manual, severity=c.severity, body=c.body[:500], source="ai"))
+    # 일정은 코드가 단계 순서대로 배치한다(schedule.layout). 단계 하나에 일정 하나다.
+    for item in layout([{"seq": st.seq, "title": st.title[:200], "duration_days": st.duration_days,
+                         "interval_days": st.interval_days} for st in out.steps]):
+        ctx.db.add(m.ScheduleItem(manual=manual, manual_step=steps_by_seq[item["step_seq"]], seq=item["seq"],
+                                  title=item["title"], start_offset_day=item["start_offset_day"],
+                                  duration_days=item["duration_days"], interval_days=item["interval_days"],
+                                  source="ai"))
+    ctx.db.commit()
+    ctx.manual = manual
+    for f in res.failures:            # 단계 seq를 DB id로 바꿔 화면의 단계와 연결한다
+        if f.target_type == "manual_step":
+            seq = f.data.get("seq", f.target_ref)
+            f.target_ref = steps_by_seq[seq].id if seq in steps_by_seq else None
+        elif f.target_type == "manual":
+            f.target_ref = manual.id
+        ctx.notes.append(f)
+    if res.retried:
+        ctx.retried.update({("C08", "manual_step", r.id) for r in steps_by_seq.values()})
+        ctx.retried.update({("C03", "manual_step", r.id) for r in steps_by_seq.values()})
+        ctx.retried.update({("C08", "manual", manual.id), ("C11", "manual", manual.id)})
+    return {"title": manual.title, "steps": len(out.steps), "cautions": len(out.cautions), "retried": res.retried}
 
 
 def stage_checks(ctx: RunContext) -> dict:

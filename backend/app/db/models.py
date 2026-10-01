@@ -256,6 +256,7 @@ class ScheduleItem(Base):
     source: Mapped[str] = mapped_column(_enum("ai", "user", name="schedule_source"), nullable=False)
 
     manual: Mapped[Manual] = relationship(back_populates="schedule")
+    manual_step: Mapped[Optional[ManualStep]] = relationship()
 
 
 # ---------- 검수와 수정 이력 ----------

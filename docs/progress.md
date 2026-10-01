@@ -90,6 +90,22 @@ pytest
 
 - 영상형이나 둘 다로 생성한 뒤 http://localhost:8000/api/projects/{id}/export?format=srt 를 열면 SRT 파일이 내려받아진다. 영상 편집기(예: 다빈치 리졸브, 프리미어)에 불러와 자막이 장면 시간에 맞는지 본다.
 
+## 단계 4. 맞춤 매뉴얼, 주의사항, 일정 (완료)
+
+- `pipeline/manual.py`: 대상과 난이도에 맞춘 매뉴얼 단계, 주의사항, 단계별 기간을 생성한다. 직후 C08(수치 대조), C03, C11을 확인해 실패하면 1회 다시 요청한다.
+- `pipeline/schedule.py`: 일정을 시작일 기준 며칠째로 단계 순서대로 이어 붙인다. 기간과 주기는 1~365일로 맞춘다.
+- `pipeline/checks.py`에 C08(숫자와 단위 대조)과 C09(일정 순서) 검사를 더했다.
+- `export/csv_ics.py`(CSV, ICS), `export/docx_export.py`(스토리보드와 매뉴얼 DOCX), `export?format=json`.
+- API: `GET /api/projects/{id}/manual`, `PATCH /api/manual-steps/{id}`, `PATCH /api/schedule-items/{id}`(기간을 바꾸면 뒤 일정이 다시 배치된다).
+- 테스트 69개 통과.
+
+확인 방법:
+
+- 둘 다(both)로 생성한 뒤 아래 주소를 열어 파일을 받는다.
+  - http://localhost:8000/api/projects/{id}/export?format=docx (Word로 열어 스토리보드 표와 매뉴얼 확인)
+  - http://localhost:8000/api/projects/{id}/export?format=ics&start_date=2026-11-02 (구글 캘린더나 Outlook에 가져오기)
+  - http://localhost:8000/api/projects/{id}/export?format=csv&start_date=2026-11-02 (엑셀에서 한글이 깨지지 않는지 확인)
+
 ## 남은 단계
 
-단계 4부터 단계 8까지 남아 있다.
+단계 5부터 단계 8까지 남아 있다.

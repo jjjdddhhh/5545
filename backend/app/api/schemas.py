@@ -199,3 +199,67 @@ class OutlineView(BaseModel):
 class NarrationPatch(BaseModel):
     # narration.body는 TEXT(최대 65,535바이트)다. 한글 3바이트 기준 2만 자 안쪽이면 안전하다.
     body: str = Field(min_length=1, max_length=20000)
+
+
+# ---------- 매뉴얼과 일정 (GET /api/projects/{id}/manual) ----------
+class ManualStepOut(ORM):
+    id: int
+    seq: int
+    title: str
+    instruction: str
+    tip: Optional[str] = None
+    source_paragraphs: list[str]
+    edited_fields: list[str] = Field(default_factory=list)
+    check_status: str = "none"     # 이 단계에 걸린 자동 검수의 가장 나쁜 결과
+
+
+class CautionOut(ORM):
+    id: int
+    severity: str                  # info, warning, danger
+    body: str
+    source: str                    # ai: 모델이 만든 것, rule: 검수 C10이 원고의 경고 문장에서 더한 것, user: 사용자가 더한 것
+
+
+class ScheduleItemOut(ORM):
+    id: int
+    seq: int
+    manual_step_id: Optional[int] = None
+    title: str
+    start_offset_day: int          # 시작일 기준 며칠째(0부터)
+    duration_days: int
+    interval_days: Optional[int] = None
+    note: Optional[str] = None
+    source: str
+
+
+class ManualInfo(ORM):
+    id: int
+    run_id: int
+    audience: str
+    difficulty: str
+    title: str
+    intro: Optional[str] = None
+    created_at: datetime
+
+
+class ManualView(BaseModel):
+    manual: ManualInfo
+    steps: list[ManualStepOut]
+    cautions: list[CautionOut]
+    schedule: list[ScheduleItemOut]
+    total_days: int                # 일정 전체 기간(마지막 항목이 끝나는 날까지)
+
+
+class ManualStepPatch(BaseModel):
+    """매뉴얼 단계에서 사용자가 고칠 수 있는 필드. 보낸 필드만 바꾼다."""
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    instruction: Optional[str] = Field(default=None, min_length=1)
+    tip: Optional[str] = None
+
+
+class ScheduleItemPatch(BaseModel):
+    """일정 항목에서 사용자가 고칠 수 있는 필드. 시작일(며칠째)은 받지 않는다. 기간이 바뀌면 코드가 다시 배치하기 때문이다."""
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    duration_days: Optional[int] = Field(default=None, ge=1, le=365)
+    interval_days: Optional[int] = Field(default=None, ge=0, le=365)   # 0을 보내면 반복 없음으로 바꾼다
+    note: Optional[str] = Field(default=None, max_length=500)

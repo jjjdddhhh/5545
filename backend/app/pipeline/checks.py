@@ -101,3 +101,66 @@ def check_language(text: str, language: str, target_type: str, target_ref: Optio
 def feedback_text(results: list[CheckResult]) -> str:
     """실패한 검사 결과를 LLM에게 다시 요청할 때 붙일 문장으로 바꾼다(llm_step.call_llm의 feedback)."""
     return "\n".join(f"- {r.message}" for r in results if r.failed)
+
+
+# ---------- C08 수치와 단위 ----------
+# 문장 속 "숫자+단위"를 뽑는다. 단위 목록은 교육·안전 원고에 자주 나오는 것으로 채웠고, 같은 글자로 시작하는
+# 단위는 긴 것을 앞에 두어(mm가 m보다 앞) 짧은 단위가 먼저 잡히지 않게 했다.
+_UNITS = ("°C", "℃", "퍼센트", "%", "시간", "주일", "개월", "초", "분", "일", "주", "달", "년", "회", "번", "개", "장",
+          "대", "명", "곳", "군데", "mm", "cm", "km", "kg", "mg", "ml", "mL", "kW", "rpm", "Nm", "bar", "psi",
+          "m", "g", "L", "V", "W", "A", "도")
+NUM_UNIT = re.compile(r"(\d+(?:[.,]\d+)*)\s*(" + "|".join(re.escape(u) for u in _UNITS) + r")?(?![A-Za-z])")
+# 같은 뜻의 단위는 하나로 맞춘다. "3℃"와 "3°C", "2주일"과 "2주"는 같은 값으로 본다.
+_UNIT_ALIAS = {"℃": "°C", "퍼센트": "%", "주일": "주", "달": "개월", "mL": "ml", "곳": "군데"}
+# 순서를 뜻하는 숫자는 수치가 아니므로 대조하지 않는다. 예: "2단계에서", "3번째", "장면 4"
+_ORDINAL_AFTER = re.compile(r"^\s*(단계|번째|째|장면|항목|절|장\b)")
+
+
+def extract_numbers(text: str) -> list[tuple[str, str]]:
+    """문장에서 (값, 단위) 목록을 뽑는다. 값의 천 단위 쉼표는 지우고("1,000" -> "1000"), 단위가 없으면 ""이다."""
+    out = []
+    for mt in NUM_UNIT.finditer(text or ""):
+        value, unit = mt.group(1), mt.group(2) or ""
+        if _ORDINAL_AFTER.match(text[mt.end(1):]):
+            continue
+        if re.fullmatch(r"\d{1,3}(,\d{3})+", value):   # 천 단위 쉼표만 지운다. "1,5" 같은 소수 쉼표는 그대로 둔다
+            value = value.replace(",", "")
+        out.append((value, _UNIT_ALIAS.get(unit, unit)))
+    return out
+
+
+def unsupported_numbers(text: str, evidence: str) -> list[str]:
+    """text의 수치 가운데 evidence(근거 원문)에 없는 것을 "값+단위" 문자열로 돌려준다.
+    단위가 있으면 값과 단위가 함께 원문에 있어야 하고, 단위가 없으면 값만 원문에 있으면 된다."""
+    have = set(extract_numbers(evidence))
+    have_values = {v for v, _ in have}
+    missing = []
+    for value, unit in extract_numbers(text):
+        ok = (value, unit) in have if unit else value in have_values
+        if not ok:
+            missing.append(f"{value}{unit}")
+    return list(dict.fromkeys(missing))
+
+
+def check_numbers(text: str, evidence: str, target_type: str, target_ref=None, label: str = "") -> CheckResult:
+    """C08: 매뉴얼 문장 속 수치와 단위가 모두 근거 원문에 있는지(설계서 9절 마지막 문단)."""
+    missing = unsupported_numbers(text, evidence)
+    if not missing:
+        return CheckResult("C08", PASS, "수치가 모두 원고와 일치합니다.", target_type, target_ref)
+    return CheckResult("C08", FAIL, f"{label}원고에 없는 수치가 있습니다: {', '.join(missing)}", target_type, target_ref,
+                       {"missing": missing})
+
+
+# ---------- C09 일정 배치 ----------
+def check_schedule(items: list[dict]) -> CheckResult:
+    """C09: 일정 항목이 매뉴얼 단계 순서대로 이어서 배치되고 기간이 1일 이상인지.
+    items는 매뉴얼 단계 순서로 정렬된 [{"step_seq", "start_offset_day", "duration_days"}, ...]이다.
+    실패하면 일정을 코드로 다시 배치한다(schedule.layout)."""
+    expected = 0
+    for it in items:
+        if it["duration_days"] < 1:
+            return CheckResult("C09", FAIL, f"'{it.get('title', '')}' 일정의 기간이 1일보다 짧습니다.", "manual")
+        if it["start_offset_day"] != expected:
+            return CheckResult("C09", FAIL, f"'{it.get('title', '')}' 일정이 매뉴얼 단계 순서와 맞지 않습니다.", "manual")
+        expected = it["start_offset_day"] + it["duration_days"]
+    return CheckResult("C09", PASS, f"일정 {len(items)}개가 단계 순서대로 배치되었습니다.", "manual")
