@@ -21,6 +21,17 @@
 
 포트는 화면 5173, 백엔드 8000, MySQL 3306, Ollama 11434다. Docker 없이 노트북 한 대에서 실행한다.
 
+## 가장 쉬운 방법 (더블클릭 또는 VS Code)
+
+Python 3.11 이상, Node.js 20 이상, MySQL 8.0.16 이상, Ollama를 설치한 뒤 다음처럼 합니다.
+
+1. 처음 한 번 `setup.bat`을 더블클릭합니다. root 비밀번호를 물으면 MySQL을 설치할 때 정한 비밀번호를 넣습니다. 백엔드·화면 패키지, `.env`, DB와 사용자, 프롬프트를 모두 준비합니다. `mysql` 명령이 PATH에 없어도 되고, 이미 만든 DB나 사용자가 있으면 그대로 쓰며 비밀번호만 `.env`와 맞춥니다. 여러 번 실행해도 안전합니다.
+2. 쓸 때마다 `start.bat`을 더블클릭합니다. 백엔드(8000)와 화면(5173)이 함께 켜지고 브라우저가 열립니다. 끌 때는 그 창에서 `Ctrl+C`를 누릅니다.
+
+VS Code에서 저장소 폴더를 열었다면 `Ctrl+Shift+B`로 실행할 수 있습니다. 설치와 상태 확인, 테스트는 `Ctrl+Shift+P`를 누른 뒤 "Tasks: Run Task"에서 고릅니다. 터미널에서는 `python dev.py setup`, `python dev.py start`, `python dev.py check`로 같은 일을 합니다.
+
+아래는 같은 과정을 명령어로 하나씩 하는 방법입니다.
+
 ## 설치부터 실행까지
 
 아래 명령어는 Windows PowerShell 기준이다. macOS나 Linux에서는 가상환경 활성화를 `source .venv/bin/activate`로, 경로의 `\`를 `/`로 바꾸고, SQL 파일은 `mysql -u root -p < db/schema.sql`처럼 넣는다.

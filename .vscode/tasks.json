@@ -1,0 +1,41 @@
+{
+  // VS Code 작업 설정. Ctrl+Shift+B를 누르면 "실행"이 바로 돈다(기본 빌드 작업).
+  // 다른 작업은 Ctrl+Shift+P 뒤 "Tasks: Run Task"(작업 실행)에서 고른다.
+  // 모든 작업은 저장소 루트의 dev.py를 부른다. 설명은 dev.py 머리말에 있다.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "실행 (백엔드 + 화면)",
+      "type": "shell",
+      "command": "python dev.py start",
+      "windows": { "command": "python dev.py start" },
+      "options": { "cwd": "${workspaceFolder}", "env": { "PYTHONUTF8": "1" } },
+      "group": { "kind": "build", "isDefault": true },
+      "isBackground": false,
+      "problemMatcher": []
+    },
+    {
+      "label": "처음 설치 (패키지, DB, 프롬프트)",
+      "type": "shell",
+      "command": "python dev.py setup",
+      "options": { "cwd": "${workspaceFolder}", "env": { "PYTHONUTF8": "1" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "상태 확인 (DB, Ollama)",
+      "type": "shell",
+      "command": "python dev.py check",
+      "options": { "cwd": "${workspaceFolder}", "env": { "PYTHONUTF8": "1" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "백엔드 테스트 (pytest)",
+      "type": "shell",
+      "command": "${workspaceFolder}/backend/.venv/bin/python -m pytest -q",
+      "windows": { "command": "${workspaceFolder}\\backend\\.venv\\Scripts\\python.exe -m pytest -q" },
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
