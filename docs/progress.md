@@ -120,6 +120,27 @@ pytest
 - 생성 후 http://localhost:8000/api/runs/{run_id}/checks 에서 항목별 결과와 통과율(summary.pass_rate)을 본다.
 - `app/rules/`의 표현 목록을 고친 뒤 `POST /api/runs/{run_id}/checks/recheck`로 다시 검수해 본다.
 
+## 단계 6. 화면 (진행 중)
+
+백그라운드에서 만드는 중이다. 끝나면 이 절을 채운다.
+
+## 단계 7. 수정 요청 에이전트 연결 (백엔드 완료, 화면 남음)
+
+- `agent/repo.py`: edit_agent.py의 Repo 프로토콜을 SQLAlchemy로 구현했다. 현재 구성안·매뉴얼만 볼 수 있고, split_subtitles는 단계 3의 함수, check는 단계 5의 검수 함수(C04, C06, C08, C11, C12)를 쓴다.
+- `agent/service.py`: 백그라운드 스레드 실행, 도구 호출마다 agent_action 저장과 SSE 알림, 제안 저장(내레이션은 내레이션 id로), 승인(필드 반영, revision, 내레이션이면 자막 재분할, 다시 검수)과 거절.
+- API: `POST /api/projects/{id}/edit-requests`(202), `GET /api/edit-requests/{id}/events`(SSE), `GET /api/edit-requests/{id}/proposals`, `POST /api/proposals/{id}/accept`, `POST /api/proposals/{id}/reject`, 그리고 `GET /api/edit-requests/{id}`, `GET /api/projects/{id}/edit-requests`.
+- 남은 일: 결과 작업공간의 수정 요청 입력창, 도구 진행 표시, 제안별 전후 비교와 승인·거절 버튼.
+
+## 단계 8. 실제 모델 확인과 평가 도구 (스크립트 완료)
+
+- `docs/eval/sample_drill.txt`: 합성 샘플 원고(전동드릴 안전교육, 1,475자, 제목·목록·표 포함).
+- `scripts/smoke_ollama.py`: 실제 모델로 한 번 생성해 단계별 표를 출력한다. `--model`로 qwen3:8b와 exaone3.5:7.8b를 비교한다.
+- `docs/eval/requests.json`: 평가 요청 20개 초안(설계서 13절 유형별 개수). 기대 결과는 사용자가 확정한다.
+- `scripts/run_eval.py`: 도구 선택 정확도, 제안 통과율, 거절 정확도, 평균 도구 호출 수를 `docs/eval/report.md`로 낸다.
+- `scripts/report_metrics.py`: 생성 시간, 검수 통과율, 사용자 수정 횟수, 에이전트 승인율을 DB에서 뽑는다.
+- README.md에 설치부터 실행까지 정리했다.
+- 테스트 97개 통과.
+
 ## 남은 단계
 
-단계 6부터 단계 8까지 남아 있다.
+단계 6 화면과 단계 7 화면 부분이 남아 있다.
